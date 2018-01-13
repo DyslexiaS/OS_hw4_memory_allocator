@@ -10,3 +10,5 @@ $(OBJS): %.o: %.c
 
 clean:
 	rm -rf *.o
+astyle:
+	 astyle --style=linux --indent=tab --max-code-length=80 --suffix=none lib/hw_malloc.h lib/hw_malloc.c hw4_mm_test.c hw4_mm_test.h
