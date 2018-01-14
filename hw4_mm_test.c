@@ -1,12 +1,27 @@
 #include "hw4_mm_test.h"
-
+struct chunk_header* recul_chunk_header(int *a)
+{
+	return (struct chunk_header*)((void*)a-40);
+}
 int main()
 {
 	int* a = hw_malloc(6);
-	print("a= %p\n",a);
+	printf("a= %p\n",a);
+	print_bin(HEAP,6);
 	int* b = hw_malloc(6);
-	print("b= %p\n",b);
-
+	printf("b= %p\n",b);
+	print_bin(HEAP,6);
+	struct chunk_header * chunk = recul_chunk_header(a);
+	printf("chunk= %p\n",chunk);
+	chunk = (void*)chunk + chunk->chunk_size;
+	printf("chunk next %p\n",chunk);
+	chunk = (void*)chunk + chunk->chunk_size;
+	printf("chunk=%p\n",chunk);
+	chunk = (void*)chunk + chunk->chunk_size;
+	if((void*)chunk>=(void*)HEAP->start_brk+HEAP_SIZE)
+		chunk=(void*)chunk-HEAP_SIZE;
+	printf("chunk = %p\n",chunk);
+	return 0;
 }
 /*
 int main() {

@@ -47,4 +47,8 @@ void list_del(struct chunk_header* del);
 void fixed_bytes(size_t* bytes);
 struct chunk_header* find_space(struct heap_t* HEAP, size_t bytes, int bin_idx);
 struct chunk_header* fixed_bin(struct heap_t* HEAP, size_t bytes);
+void print_bin(struct heap_t* HEAP, int bin_idx);
+void renew_prev_chunk(struct chunk_header* entry);
+long long int get_relative_addr(struct heap_t* HEAP,
+                                struct chunk_header* entry);
 #endif
