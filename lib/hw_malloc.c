@@ -156,12 +156,12 @@ struct chunk_header* find_space(struct heap_t* HEAP, size_t bytes, int bin_idx)
 	assert(HEAP!=NULL);
 	struct chunk_header* bin_head = HEAP->BIN[bin_idx];
 	struct chunk_header* listptr = bin_head->next;
-    struct chunk_header* to_use_chunk = listptr;
+	struct chunk_header* to_use_chunk = listptr;
 	while(listptr != bin_head) {
 		if(listptr->chunk_size == bytes)
 			return listptr;
-        else if(to_use_chunk->chunk_size != listptr->chunk_size)
-            to_use_chunk = listptr;
+		else if(to_use_chunk->chunk_size != listptr->chunk_size)
+			to_use_chunk = listptr;
 		if(listptr->chunk_size < bytes)
 			break;
 		listptr = listptr->next;
@@ -230,7 +230,7 @@ void put_into_bin(struct chunk_header* free_chunk)
 		list_del(free_chunk);
 		merge(upper, free_chunk);
 	}
-    if(free_chunk->prev_free_flag == true && lower < free_chunk) {
+	if(free_chunk->prev_free_flag == true && lower < free_chunk) {
 		list_del(free_chunk);
 		list_del(lower);
 		merge(free_chunk, lower);
