@@ -22,17 +22,8 @@ void *hw_malloc(size_t bytes)
 }
 int hw_free(void *mem)
 {
-//   puts("*****************bin **************");
-//   print_bin(HEAP,0);
-//   print_bin(HEAP,1);
-//   print_bin(HEAP,2);
-//   print_bin(HEAP,3);
-//   print_bin(HEAP,4);
-//   print_bin(HEAP,5);
-//   print_bin(HEAP,6);
 	mem+=(long long int)HEAP->start_brk;
 	if(mem>=(void*)HEAP->start_brk+HEAP_SIZE || mem<(void*)HEAP->start_brk) {
-		puts("no in range");
 		return 0;
 	}
 	struct chunk_header* free_chunk = mem_to_chunk(mem);
@@ -98,11 +89,10 @@ void init_chunk_header(struct chunk_header* entry, size_t bytes,
 	entry->prev_free_flag = prev_free_flag;
 }
 void split_chunk(struct chunk_header* org_chunk,
-                 size_t bytes) //TODO smaller than 48
+                 size_t bytes)
 {
 	assert(org_chunk!=NULL);
 	bytes += sizeof(struct chunk_header);
-//    printf("split bytes = %lu\n", bytes);
 	struct chunk_header* rest_chunk = get_uchunk_header(org_chunk, bytes);
 	if(rest_chunk->chunk_size == HEAP_SIZE) {
 		init_chunk_header(rest_chunk,org_chunk->chunk_size-bytes,bytes,0);
@@ -117,7 +107,6 @@ void split_chunk(struct chunk_header* org_chunk,
 }
 int get_bin_num(chunk_size_t chunk_size)
 {
-//	printf("get func, chunk_size =%lld\n",chunk_size);
 	assert(chunk_size>=40 && chunk_size%8==0);
 	return (chunk_size-48)/8>5 ?6 :(chunk_size-48)/8;
 }
@@ -140,9 +129,7 @@ void list_add(struct heap_t* HEAP, struct chunk_header* entry)
 	struct chunk_header* listptr;
 	struct chunk_header* bin_head = HEAP->BIN[bin_num];
 	for(listptr = bin_head->next; ; listptr=listptr->next) {
-		//    printf("%lld, %lld\n", entry->chunk_size, listptr->chunk_size);
 		if(entry->chunk_size > listptr->chunk_size) {
-			//    puts("list_add");
 			__list_add(entry,listptr->prev,listptr);
 			break;
 		}
@@ -167,26 +154,23 @@ void fixed_bytes(size_t* bytes)
 struct chunk_header* find_space(struct heap_t* HEAP, size_t bytes, int bin_idx)
 {
 	assert(HEAP!=NULL);
-	// puts("in find space");
-	//printf("bin idx= %d\n",bin_idx);
 	struct chunk_header* bin_head = HEAP->BIN[bin_idx];
 	struct chunk_header* listptr = bin_head->next;
+    struct chunk_header* to_use_chunk = listptr;
 	while(listptr != bin_head) {
 		if(listptr->chunk_size == bytes)
 			return listptr;
-		else if(listptr->chunk_size < bytes)
+        else if(to_use_chunk->chunk_size != listptr->chunk_size)
+            to_use_chunk = listptr;
+		if(listptr->chunk_size < bytes)
 			break;
 		listptr = listptr->next;
 	}
-	if(bin_idx==6 && listptr->prev == bin_head ) {
-		return NULL;
-	}
-	return listptr->prev;
+	return to_use_chunk->chunk_size >= bytes ? to_use_chunk :NULL;
 }
 struct chunk_header* fixed_bin(struct heap_t* HEAP, size_t bytes)
 {
 	assert(HEAP!=NULL && bytes%8==0);
-	//puts("in fixed bin");
 	bytes += sizeof(struct chunk_header);
 	int bin_num = get_bin_num(bytes);
 	for(; bin_num <BIN_NUM; ++bin_num) {
@@ -225,10 +209,7 @@ bool is_valid(void* mem)
 {
 	struct chunk_header* free_chunk = mem_to_chunk(mem);
 	struct chunk_header* ptr = (void*)HEAP->start_brk;
-//    printf("heap %p\n", HEAP->start_brk);
-	//      printf("ptr= %p, fc =%p\n", ptr,free_chunk);
 	while((void*)ptr <= (void*)free_chunk) {
-		//    printf("ptr= %p, fc =%p\n", ptr,free_chunk);
 		if((void*)ptr == (void*)free_chunk)
 			return true;
 		ptr = get_uchunk_header(ptr, ptr->chunk_size);
@@ -248,7 +229,8 @@ void put_into_bin(struct chunk_header* free_chunk)
 		list_del(upper);
 		list_del(free_chunk);
 		merge(upper, free_chunk);
-	} else if(free_chunk->prev_free_flag == true && lower < free_chunk) {
+	}
+    if(free_chunk->prev_free_flag == true && lower < free_chunk) {
 		list_del(free_chunk);
 		list_del(lower);
 		merge(free_chunk, lower);
