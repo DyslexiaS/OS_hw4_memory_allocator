@@ -32,10 +32,8 @@ extern int hw_free(void *mem);
 extern void *get_start_sbrk(void);
 void heap_init();
 void bin_init();
-struct chunk_header* get_uchunk_header(struct chunk_header* add_pos,
-                                       size_t bytes);
-struct chunk_header* get_lchunk_header(struct chunk_header* add_pos,
-                                       size_t bytes);
+struct chunk_header* get_uchunk_header(struct chunk_header* add_pos);
+struct chunk_header* get_lchunk_header(struct chunk_header* add_pos);
 void init_chunk_header(struct chunk_header* entry, size_t bytes,
                        chunk_size_t prev_chunk_size, chunk_flag_t prev_free_flag);
 void split_chunk(struct chunk_header* org_chunk, size_t bytes);
@@ -44,7 +42,6 @@ void __list_add(struct chunk_header* new_lst,
                 struct chunk_header* prev,
                 struct chunk_header* next);
 void list_add(struct heap_t* HEAP, struct chunk_header* entry);
-void __list_del(struct chunk_header* prev, struct chunk_header* next);
 void list_del(struct chunk_header* del);
 void fixed_bytes(size_t* bytes);
 struct chunk_header* find_space(struct heap_t* HEAP, size_t bytes, int bin_idx);

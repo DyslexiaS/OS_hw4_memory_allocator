@@ -6,26 +6,20 @@ void *hw_malloc(size_t bytes)
 	if(HEAP == NULL)
 		heap_init(&HEAP);
 	struct chunk_header* org_chunk = fixed_bin(HEAP,bytes);
-	if(org_chunk == NULL) {
-		printf("no fixed_bin.\n");
-		return NULL;
-	} else {
-		list_del(org_chunk);
-		if(org_chunk->chunk_size >= bytes+sizeof(struct chunk_header)+48)
-			split_chunk(org_chunk, bytes);
-		else {
-			struct chunk_header* upper = get_uchunk_header(org_chunk,org_chunk->chunk_size);
-			upper->prev_free_flag = false;
-		}
-		return recul_chunk_header(org_chunk);
+	list_del(org_chunk);
+	if(org_chunk->chunk_size >= bytes+sizeof(struct chunk_header)+48)
+		split_chunk(org_chunk, bytes);
+	else {
+		struct chunk_header* upper = get_uchunk_header(org_chunk);
+		upper->prev_free_flag = false;
 	}
+	return recul_chunk_header(org_chunk);
 }
 int hw_free(void *mem)
 {
 	mem+=(long long int)HEAP->start_brk;
-	if(mem>=(void*)HEAP->start_brk+HEAP_SIZE || mem<(void*)HEAP->start_brk) {
+	if(mem>=(void*)HEAP->start_brk+HEAP_SIZE || mem<(void*)HEAP->start_brk)
 		return 0;
-	}
 	struct chunk_header* free_chunk = mem_to_chunk(mem);
 	if(is_valid(mem)==true && is_free(free_chunk) == false) {
 		put_into_bin(free_chunk);
@@ -59,17 +53,16 @@ void bin_init(struct chunk_header** bin)
 	(*bin)->prev_chunk_size = sizeof(struct chunk_header);
 	(*bin)->prev_free_flag = true;
 }
-struct chunk_header* get_uchunk_header(struct chunk_header* add_pos,
-                                       size_t bytes)
+struct chunk_header* get_uchunk_header(struct chunk_header* add_pos)
 {
 	assert(add_pos != NULL);
-	struct chunk_header* re_header = (struct chunk_header*)((void*)add_pos+bytes);
+	struct chunk_header* re_header = (struct chunk_header*)((
+	                                     void*)add_pos+add_pos->chunk_size);
 	if((void*)re_header >= (void*)HEAP->start_brk+HEAP_SIZE)
 		re_header = (void*)re_header-HEAP_SIZE;
 	return re_header;
 }
-struct chunk_header* get_lchunk_header(struct chunk_header* add_pos,
-                                       size_t bytes)
+struct chunk_header* get_lchunk_header(struct chunk_header* add_pos)
 {
 	assert(add_pos != NULL);
 	struct chunk_header* re_header = (struct chunk_header*)((
@@ -93,7 +86,8 @@ void split_chunk(struct chunk_header* org_chunk,
 {
 	assert(org_chunk!=NULL);
 	bytes += sizeof(struct chunk_header);
-	struct chunk_header* rest_chunk = get_uchunk_header(org_chunk, bytes);
+	struct chunk_header* rest_chunk = (struct chunk_header*)((
+	                                      void*)org_chunk+bytes);
 	if(rest_chunk->chunk_size == HEAP_SIZE) {
 		init_chunk_header(rest_chunk,org_chunk->chunk_size-bytes,bytes,0);
 		init_chunk_header(org_chunk,bytes,org_chunk->chunk_size-bytes,1);
@@ -135,15 +129,11 @@ void list_add(struct heap_t* HEAP, struct chunk_header* entry)
 		}
 	}
 }
-void __list_del(struct chunk_header* prev, struct chunk_header* next)
-{
-	next->prev = prev;
-	prev->next = next;
-}
 void list_del(struct chunk_header* del)
 {
 	assert(del!=NULL);
-	__list_del(del->prev,del->next);
+	del->next->prev = del->prev;
+	del->prev->next = del->next;
 	del->next = NULL;
 	del->prev = NULL;
 }
@@ -192,7 +182,7 @@ void print_bin(struct heap_t* HEAP, int bin_idx)
 }
 void renew_upper_chunk(struct chunk_header* entry)
 {
-	struct chunk_header* upper_chunk = get_uchunk_header(entry,entry->chunk_size);
+	struct chunk_header* upper_chunk = get_uchunk_header(entry);
 	assert(upper_chunk!=NULL);
 	upper_chunk->prev_chunk_size = entry->chunk_size;
 	upper_chunk->prev_free_flag = true;
@@ -212,7 +202,7 @@ bool is_valid(void* mem)
 	while((void*)ptr <= (void*)free_chunk) {
 		if((void*)ptr == (void*)free_chunk)
 			return true;
-		ptr = get_uchunk_header(ptr, ptr->chunk_size);
+		ptr = get_uchunk_header(ptr);
 	}
 	return false;
 }
@@ -220,24 +210,18 @@ void put_into_bin(struct chunk_header* free_chunk)
 {
 	renew_upper_chunk(free_chunk);
 	list_add(HEAP, free_chunk);
-	struct chunk_header* upper = get_uchunk_header(free_chunk,
-	                             free_chunk->chunk_size);
-	struct chunk_header* upper2 = get_uchunk_header(upper, upper->chunk_size);
-	struct chunk_header* lower = get_lchunk_header(free_chunk,
-	                             free_chunk->prev_chunk_size);
-	if(upper2->prev_free_flag == true && upper > free_chunk) {
-		list_del(upper);
-		list_del(free_chunk);
+	struct chunk_header* upper = get_uchunk_header(free_chunk);
+	struct chunk_header* upper2 = get_uchunk_header(upper);
+	struct chunk_header* lower = get_lchunk_header(free_chunk);
+	if(upper2->prev_free_flag == true && upper > free_chunk)
 		merge(upper, free_chunk);
-	}
-	if(free_chunk->prev_free_flag == true && lower < free_chunk) {
-		list_del(free_chunk);
-		list_del(lower);
+	if(free_chunk->prev_free_flag == true && lower < free_chunk)
 		merge(free_chunk, lower);
-	}
 }
 void merge(struct chunk_header* upper, struct chunk_header* lower)
 {
+	list_del(upper);
+	list_del(lower);
 	renew_upper_chunk(upper);
 	lower->chunk_size += upper->chunk_size;
 	renew_upper_chunk(lower);
@@ -250,6 +234,6 @@ void * recul_chunk_header(struct chunk_header* re_chunk)
 }
 bool is_free(struct chunk_header* entry)
 {
-	struct chunk_header* upper = get_uchunk_header(entry, entry->chunk_size);
+	struct chunk_header* upper = get_uchunk_header(entry);
 	return upper->prev_free_flag;
 }
